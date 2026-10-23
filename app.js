@@ -2,6 +2,19 @@
 import { firebaseConfig } from "./firebase-config.js";
 
 // ---------- Parámetros de control (tabla de calidad CIMET) ----------
+// Referencias que produce CIMET (tomadas del consolidado de Proceso Rotura del Visor).
+// Para agregar o quitar una, edita esta lista.
+const REFERENCIAS = [
+  "4E · Bloque #4 Estándar",
+  "4EL · Bloque #4 Liso",
+  "4H8 · Bloque #4 8 huecos",
+  "4T · Bloque #4 Tradicional",
+  "4B · Bloque 4B",
+  "5E · Bloque #5 Estándar",
+  "5T · Bloque #5 Tradicional",
+  "5B · Bloque 5B",
+  "L9 · Bloque Llanerito",
+];
 const OK = ["Conforme", "No conforme"];
 const AREAS = [
   { id: "desm", nombre: "Desmenuzadores", etapa: "Materia prima / mezcla", params: [
@@ -13,7 +26,7 @@ const AREAS = [
     { id: "l3", l: "Espesor laminilla (laminador 3)", u: "mm", min: 3, obj: 4, max: 5 },
     { id: "l086", l: "Espesor laminilla (laminador 086)", u: "mm", min: 2.5, obj: 3.5, max: 4 } ] },
   { id: "mold", nombre: "Moldeo", etapa: "Extrusión y moldeo", params: [
-    { id: "ref", l: "Referencia", t: "txt" },
+    { id: "ref", l: "Referencia", t: "txt", op: REFERENCIAS },
     { id: "rot", l: "Rotulado", t: "ok" },
     { id: "rad", l: "Radiografía", t: "ok" },
     { id: "pres", l: "Presión de extrusión", u: "bar", min: 27, obj: 28, max: 30 },
@@ -57,7 +70,7 @@ const AREAS = [
       { id: "cj11", l: "Carbojet #11", u: "kg", min: 1500, obj: 1650, max: 1800 },
       { id: "cj12", l: "Carbojet #12", u: "kg", min: 35, obj: 40, max: 50 } ] } },
   { id: "desa", nombre: "Desapilado", etapa: "Producto terminado", params: [
-    { id: "ref", l: "Referencia", t: "txt" },
+    { id: "ref", l: "Referencia", t: "txt", op: REFERENCIAS },
     { id: "peso", l: "Peso en cocido de la pieza", u: "g", porRef: true },
     { id: "largo", l: "Longitud de la pieza", u: "mm", porRef: true },
     { id: "ancho", l: "Ancho de la pieza", u: "mm", porRef: true },
@@ -219,7 +232,9 @@ function rangoTotal(a) { return a.turno.params.reduce((o, p) => ({ min: o.min + 
 function inputHtml(id, p, v, data) {
   const ev = evalua(p, v), cls = ev === false ? "fuera" : ev === true ? "dentro" : "";
   if (p.t === "ok") return `<select id="${id}" class="${cls}" ${data} aria-label="${esc(p.l)}"><option value="">—</option>${OK.map(o => `<option${o === v ? " selected" : ""}>${o}</option>`).join("")}</select>`;
-  if (p.t === "txt") return `<input id="${id}" type="text" ${data} value="${esc(v)}" aria-label="${esc(p.l)}" placeholder="Ej. bloque N°5">`;
+  if (p.t === "txt" && p.op) { const ops = !vacio(v) && !p.op.includes(v) ? [...p.op, v] : p.op;
+    return `<select id="${id}" ${data} aria-label="${esc(p.l)}"><option value="">Seleccionar…</option>${ops.map(o => `<option${o === v ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>`; }
+  if (p.t === "txt") return `<input id="${id}" type="text" ${data} value="${esc(v)}" aria-label="${esc(p.l)}">`;
   return `<input id="${id}" class="${cls}" type="number" inputmode="decimal" step="any" ${data} value="${esc(v)}" aria-label="${esc(p.l)}">`;
 }
 function prow(id, p, v, data) {
