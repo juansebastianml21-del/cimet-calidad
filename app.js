@@ -8,7 +8,7 @@ const REFERENCIAS = [
   "4E · Bloque #4 Estándar (10x20x30)",
   "4EL · Bloque #4 Liso (10x20x30)",
   "4H8 · Bloque #4 8 huecos (10x20x30)",
-  "4T · Bloque #4 Tradicional (10x20x30)",
+  "4T · Bloque #4 Tradicional (9x22x33)",
   "4B · Bloque 4B (9x22x31)",
   "5E · Bloque #5 Estándar (12x20x30)",
   "5T · Bloque #5 Tradicional (11x23x33)",

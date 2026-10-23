@@ -1,6 +1,6 @@
 // Permite abrir la app sin señal y la hace instalable.
 // Al publicar cambios, sube el número de VERSION para que los celulares actualicen.
-const VERSION = "cimet-calidad-v4";
+const VERSION = "cimet-calidad-v5";
 const FB = "https://www.gstatic.com/firebasejs/10.12.2/";
 const PRECARGA = [
   "./", "index.html", "app.js", "firebase-config.js", "manifest.webmanifest",
