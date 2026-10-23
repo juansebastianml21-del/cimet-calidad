@@ -5,15 +5,15 @@ import { firebaseConfig } from "./firebase-config.js";
 // Referencias que produce CIMET (tomadas del consolidado de Proceso Rotura del Visor).
 // Para agregar o quitar una, edita esta lista.
 const REFERENCIAS = [
-  "4E · Bloque #4 Estándar",
-  "4EL · Bloque #4 Liso",
-  "4H8 · Bloque #4 8 huecos",
-  "4T · Bloque #4 Tradicional",
-  "4B · Bloque 4B",
-  "5E · Bloque #5 Estándar",
-  "5T · Bloque #5 Tradicional",
-  "5B · Bloque 5B",
-  "L9 · Bloque Llanerito",
+  "4E · Bloque #4 Estándar (10x20x30)",
+  "4EL · Bloque #4 Liso (10x20x30)",
+  "4H8 · Bloque #4 8 huecos (10x20x30)",
+  "4T · Bloque #4 Tradicional (10x20x30)",
+  "4B · Bloque 4B (9x22x31)",
+  "5E · Bloque #5 Estándar (12x20x30)",
+  "5T · Bloque #5 Tradicional (11x23x33)",
+  "5B · Bloque 5B (11x23x31)",
+  "L9 · Bloque Llanerito (9x20x30)",
 ];
 const OK = ["Conforme", "No conforme"];
 const AREAS = [
