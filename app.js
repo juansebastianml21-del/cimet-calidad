@@ -360,13 +360,14 @@ $("#flow").addEventListener("click", e => {
 });
 
 function tab(r) {
-  $("#tab-areas").setAttribute("aria-selected", r === "areas"); $("#tab-resumen").setAttribute("aria-selected", r === "resumen");
-  $("#view-areas").hidden = r !== "areas"; $("#view-resumen").hidden = r !== "resumen";
+  ["areas", "resumen", "informe"].forEach(k => { $("#tab-" + k).setAttribute("aria-selected", r === k); $("#view-" + k).hidden = r !== k; });
+  document.querySelector(".footer-bar").hidden = r === "informe";
   if (r === "resumen") renderResumen();
   scrollTo(0, 0);
 }
 $("#tab-areas").onclick = () => tab("areas");
 $("#tab-resumen").onclick = () => tab("resumen");
+$("#tab-informe").onclick = () => tab("informe");
 
 $("#m-fecha").value = S.meta.fecha; $("#m-turno").value = S.meta.turno; $("#m-sup").value = S.meta.sup;
 $("#m-fecha").addEventListener("change", e => { enviarTodo(); S.meta.fecha = e.target.value; abrirTurno(); });
@@ -421,3 +422,80 @@ if (DEMO) {
   });
   $("#logout").onclick = () => { enviarTodo(); fb.A.signOut(fb.auth); };
 }
+
+
+// ---------- Informes ----------
+// Junta todos los turnos de un rango de fechas y los deja listos para Excel (una fila por valor registrado).
+let INF = [];
+{
+  const hoy = turnoActual().fecha;
+  $("#i-hasta").value = hoy; $("#i-desde").value = hoy.slice(0, 8) + "01";
+}
+async function cargarTurnos(desde, hasta) {
+  if (DEMO) {
+    const out = [];
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (!k.startsWith("cimet-demo-2")) continue;
+      const id = k.slice(11), [f, t] = id.split("_"); if (f >= desde && f <= hasta) out.push({ id, fecha: f, turno: t, ...JSON.parse(localStorage.getItem(k)) }); }
+    return out;
+  }
+  const q = fb.F.query(fb.F.collection(fb.db, "turnos"), fb.F.where("fecha", ">=", desde), fb.F.where("fecha", "<=", hasta));
+  const snap = await fb.F.getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+function filasTurno(t) {
+  const filas = [], sup = Object.values(t.supervisores || {}).join(", ");
+  AREAS.forEach(a => {
+    const x = (t.areas || {})[a.id]; if (!x) return;
+    const L = Object.values(x.r || {}).sort((p, q) => (p.n || 0) - (q.n || 0));
+    L.forEach((r, j) => a.params.forEach(p => { const v = r[p.id]; if (vacio(v)) return;
+      filas.push({ fecha: t.fecha, turno: t.turno, sup, area: a.nombre, lectura: j + 1, hora: r.h || "", p, v, ev: evalua(p, v), obs: x.obs || "" }); }));
+    if (a.turno) a.turno.params.forEach(p => { const v = (x.t || {})[p.id]; if (vacio(v)) return;
+      filas.push({ fecha: t.fecha, turno: t.turno, sup, area: a.nombre, lectura: "turno", hora: "", p, v, ev: evalua(p, v), obs: x.obs || "" }); });
+  });
+  return filas;
+}
+$("#i-cargar").onclick = async () => {
+  const desde = $("#i-desde").value, hasta = $("#i-hasta").value;
+  if (!desde || !hasta || desde > hasta) { toast("Revisa las fechas: Desde debe ser anterior a Hasta"); return; }
+  $("#i-estado").textContent = "Consultando…"; $("#i-cargar").disabled = true;
+  try {
+    const turnos = (await cargarTurnos(desde, hasta)).sort((a, b) => a.id < b.id ? -1 : 1);
+    INF = turnos.map(t => ({ t, filas: filasTurno(t) }));
+    renderInforme();
+    $("#i-estado").textContent = turnos.length ? `${turnos.length} turno${turnos.length > 1 ? "s" : ""} entre ${desde} y ${hasta}` : "No hay turnos registrados en ese rango.";
+  } catch (e) { console.error(e); $("#i-estado").textContent = "No se pudo consultar. Revisa la conexión."; }
+  $("#i-cargar").disabled = false;
+};
+function renderInforme() {
+  const todas = INF.flatMap(x => x.filas), conRango = todas.filter(f => f.ev !== null), fuera = conRango.filter(f => f.ev === false);
+  const has = INF.length > 0;
+  ["#i-kpis", "#i-panel-turnos", "#i-panel-fuera"].forEach(s => $(s).hidden = !has);
+  if (!has) return;
+  const conf = conRango.length ? (conRango.length - fuera.length) / conRango.length * 100 : null;
+  $("#i-kpis").innerHTML = [
+    { k: "Turnos", v: INF.length },
+    { k: "Valores registrados", v: fmt(todas.length) },
+    { k: "Dentro de límites", v: conf == null ? "—" : `${fmt(conf, 1)}<small>%</small>`, alert: conf != null && conf < 90 },
+    { k: "Fuera de límites", v: fmt(fuera.length), alert: fuera.length > 0 },
+  ].map(x => `<div class="kpi${x.alert ? " alert" : ""}"><span class="k">${x.k}</span><span class="v">${x.v}</span></div>`).join("");
+  $("#i-turnos").innerHTML = `<thead><tr><th>Turno</th><th>Supervisor</th><th>Valores</th><th>Fuera</th><th>Áreas rev.</th></tr></thead><tbody>${INF.map(({ t, filas }) => {
+    const nf = filas.filter(f => f.ev === false).length, rev = AREAS.filter(a => ((t.areas || {})[a.id] || {}).done).length;
+    return `<tr><td>${esc(t.fecha)} · ${esc((TURNOS[t.turno] || t.turno).replace(/ \(.*/, ""))}</td><td>${esc(Object.values(t.supervisores || {}).join(", ") || "—")}</td><td>${filas.length}</td><td class="${nf ? "bad" : ""}">${nf}</td><td>${rev} de 7</td></tr>`;
+  }).join("")}</tbody>`;
+  const cuenta = {}; fuera.forEach(f => { const k = `${f.area} · ${f.p.l}`; cuenta[k] = (cuenta[k] || 0) + 1; });
+  const top = Object.entries(cuenta).sort((a, b) => b[1] - a[1]).slice(0, 8), max = Math.max(1, ...top.map(x => x[1]));
+  $("#i-bars").innerHTML = top.length ? top.map(([k, n]) => `<div class="barrow" style="grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 44px"><span>${esc(k)}</span><div class="t"><div class="f" style="width:${n / max * 100}%"></div></div><span class="n">${n}</span></div>`).join("") : '<div class="sub">Ningún valor fuera de límites en este rango.</div>';
+}
+$("#i-excel").onclick = () => {
+  const num_ = v => (v === "" || v == null) ? "" : String(v).replace(".", ",");
+  const cel = v => { const s = String(v ?? ""); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const head = ["Fecha", "Turno", "Supervisor", "Área", "Lectura", "Hora", "Parámetro", "Unidad", "Valor", "Lím. inf", "Objetivo", "Lím. sup", "Estado", "Observaciones del área"];
+  const rows = INF.flatMap(x => x.filas).map(f => [f.fecha, TURNOS[f.turno] || f.turno, f.sup, f.area, f.lectura, f.hora, f.p.l, f.p.u || "",
+    f.p.t ? f.v : num_(f.v), num_(f.p.min), num_(f.p.obj), num_(f.p.max), f.ev === false ? "Fuera" : f.ev === true ? "Dentro" : "Sin rango", f.obs]);
+  const csv = "﻿" + [head, ...rows].map(r => r.map(cel).join(";")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = `CIMET_calidad_${$("#i-desde").value}_a_${$("#i-hasta").value}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast("Archivo descargado");
+};

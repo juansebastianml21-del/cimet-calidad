@@ -221,8 +221,9 @@ header.bar { padding-top: env(safe-area-inset-top, 0px); }
       <label>Supervisor<input type="text" id="m-sup" placeholder="Nombre"></label>
     </div>
     <div class="tabs" role="tablist">
-      <button role="tab" id="tab-areas" aria-selected="true">Lecturas por área</button>
-      <button role="tab" id="tab-resumen" aria-selected="false">Resumen del turno</button>
+      <button role="tab" id="tab-areas" aria-selected="true">Lecturas</button>
+      <button role="tab" id="tab-resumen" aria-selected="false">Resumen</button>
+      <button role="tab" id="tab-informe" aria-selected="false">Informes</button>
     </div>
   </div>
 </header>
@@ -242,6 +243,26 @@ header.bar { padding-top: env(safe-area-inset-top, 0px); }
     <div class="panel">
       <div class="row-end"><h3>Reporte para WhatsApp</h3><button class="btn" id="copy">Copiar reporte</button></div>
       <pre class="msg" id="msg"></pre>
+    </div>
+  </section>
+
+  <section id="view-informe" hidden style="display:grid;gap:16px">
+    <div class="panel">
+      <h3>Informe por fechas</h3>
+      <div class="grid" style="padding-top:0">
+        <label class="field"><span>Desde</span><input type="date" id="i-desde"></label>
+        <label class="field"><span>Hasta</span><input type="date" id="i-hasta"></label>
+      </div>
+      <div class="row-end"><span class="sub" id="i-estado">Elige el rango y toca Consultar.</span><button class="btn primary" id="i-cargar">Consultar</button></div>
+    </div>
+    <div class="kpis" id="i-kpis" hidden></div>
+    <div class="panel" id="i-panel-turnos" hidden>
+      <div class="row-end"><h3>Turnos registrados</h3><button class="btn ok" id="i-excel">Descargar para Excel</button></div>
+      <div style="overflow-x:auto"><table class="res" id="i-turnos"></table></div>
+    </div>
+    <div class="panel" id="i-panel-fuera" hidden>
+      <h3>Parámetros que más salen de límites</h3>
+      <div class="bars" id="i-bars"></div>
     </div>
   </section>
 </main>
